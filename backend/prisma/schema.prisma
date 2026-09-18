@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "sqlite"
+  url = env("DATABASE_URL")
+}
+model User {
+  id String @id @default(cuid())
+  institutionId String
+  name String
+  email String
+  passwordHash String
+  role String @default("student")
+  createdAt DateTime @default(now())
+  documents Document[]
+  progress ChecklistProgress[]
+  @@unique([institutionId, email])
+}
+model Content {
+  id String @id @default(cuid())
+  institutionId String
+  kind String
+  title String
+  body String
+  campus String @default("all")
+  category String @default("General")
+  status String @default("draft")
+  verified Boolean @default(false)
+  sourceUrl String?
+  sourceLabel String?
+  verifiedAt DateTime?
+  latitude Float?
+  longitude Float?
+  phone String?
+  startsAt DateTime?
+  venue String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([institutionId, status, kind, campus])
+}
+model Document {
+  id String @id @default(cuid())
+  institutionId String
+  ownerId String
+  owner User @relation(fields:[ownerId], references:[id], onDelete:Cascade)
+  name String
+  text String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  @@index([ownerId, expiresAt])
+}
+model ChecklistProgress {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  taskId String
+  @@unique([userId, taskId])
+}
+model AuditLog {
+  id String @id @default(cuid())
+  institutionId String
+  actorId String
+  action String
+  contentId String
+  createdAt DateTime @default(now())
+}

@@ -1,0 +1,24 @@
+import {test,expect} from '@playwright/test';
+test('administrator can review a draft and submit a verified publication',async({page})=>{
+  const user={id:'editor',name:'Test Editor',email:'editor@example.test',role:'admin'};
+  let saved:Record<string,unknown>|undefined;
+  const draft={id:'fixture',kind:'knowledge',title:'Registration draft',body:'University registration guidance prepared for this UI test.',campus:'all',category:'General',status:'draft',verified:false,sourceUrl:null,sourceLabel:null,latitude:null,longitude:null,phone:null,startsAt:null,venue:null,updatedAt:new Date().toISOString(),verifiedAt:null};
+  await page.route('**/api/auth/login',route=>route.fulfill({json:{user,token:'ui-fixture-token'}}));
+  await page.route('**/api/admin/users',route=>route.fulfill({json:[user]}));
+  await page.route('**/api/admin/content',route=>route.fulfill({json:[draft]}));
+  await page.route('**/api/admin/content/fixture',async route=>{saved=route.request().postDataJSON();await route.fulfill({json:{...draft,...saved}});});
+  await page.goto('/profile');
+  await page.getByLabel('Email address').fill(user.email);
+  await page.getByLabel(/^Password/).fill('ui-test-password-only');
+  await page.getByRole('button',{name:'Sign in',exact:true}).click();
+  await page.getByRole('link',{name:'Open administration'}).click();
+  await expect(page.getByRole('heading',{name:'Keep your campus informed'})).toBeVisible();
+  await page.getByRole('button',{name:/Registration draft/}).click();
+  await page.getByLabel('Source label',{exact:true}).fill('University test source');
+  await page.getByLabel('Official source URL').fill('https://example.org/verified');
+  await page.getByLabel('Publication status').selectOption('published');
+  await page.getByRole('checkbox').check();
+  await page.getByRole('button',{name:'Save content'}).click();
+  await expect(page.getByRole('status')).toContainText('Content saved');
+  expect(saved).toMatchObject({status:'published',verified:true,sourceUrl:'https://example.org/verified'});
+});
