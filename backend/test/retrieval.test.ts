@@ -6,6 +6,7 @@ import { normalizeExtractedText } from "../src/modules/documents/extract";
 import { assertPublishable } from "../src/modules/content/content.service";
 import { hashPassword, checkPassword } from "../src/modules/auth/password";
 import { bukFaqs } from "../prisma/buk-faqs";
+import { bukPlaces } from "../prisma/buk-places";
 import { AiService } from "../src/modules/ai/ai.service";
 import type { ContentService } from "../src/modules/content/content.service";
 
@@ -109,4 +110,57 @@ test("extracted text re-joins one-glyph-per-line runs and tidies whitespace", ()
     normalizeExtractedText(shattered),
     "Course Outline\n\nCertified by BUK\n\nWeek 1: Intro to systems\nA.\nB.\nC.",
   );
+});
+test("navigation questions route to verified places, not FAQs", async () => {
+  const rows = [...bukFaqs, ...bukPlaces].map((r) => ({
+    ...r,
+    updatedAt: new Date(),
+  }));
+  const service = new AiService({
+    list: async () => rows,
+  } as unknown as ContentService);
+  const where = await service.chat("Where is the Faculty of Computing?", "all");
+  assert.equal(where.mode, "location");
+  assert.equal(where.sources[0].title, "Faculty of Computing");
+  assert.match(where.actions![0].href, /^\/map\?id=osm-way-662005578$/);
+  const gate = await service.chat("How do I get to the main gate?", "old");
+  assert.equal(gate.mode, "location");
+  assert.equal(gate.sources[0].title, "Old Campus Main Gate");
+  const none = await service.chat("Where is the swimming pool?", "all");
+  assert.equal(none.mode, "insufficient-evidence");
+  assert.equal(none.actions![0].href, "/map");
+});
+test("an exact place name answers with that place alone", async () => {
+  const rows = [...bukFaqs, ...bukPlaces].map((r) => ({
+    ...r,
+    updatedAt: new Date(),
+  }));
+  const service = new AiService({
+    list: async () => rows,
+  } as unknown as ContentService);
+  const one = await service.chat("Where is the Faculty of Computing?", "all");
+  assert.equal(one.sources.length, 1);
+  const many = await service.chat("Where can I find a bank?", "new");
+  assert.equal(many.mode, "location");
+  assert.ok(many.sources.length > 1);
+});
+test("student phrasing reaches the matching FAQ through synonyms and stems", async () => {
+  const rows = bukFaqs.map((r) => ({ ...r, updatedAt: new Date() }));
+  const service = new AiService({
+    list: async () => rows,
+  } as unknown as ContentService);
+  const hostel = await service.chat(
+    "how do i get accommodation on campus",
+    "all",
+  );
+  assert.equal(hostel.mode, "extractive");
+  assert.match(hostel.sources[0].title, /housing/i);
+  const fees = await service.chat("can i pay tuition in instalments?", "all");
+  assert.match(fees.sources[0].title, /installments/i);
+  const unknown = await service.chat(
+    "what is the dress code for lectures",
+    "all",
+  );
+  assert.equal(unknown.mode, "insufficient-evidence");
+  assert.ok(unknown.actions!.length >= 1);
 });

@@ -12,6 +12,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "admin:create": "tsx scripts/create-admin.ts",
+    "content:import": "tsx scripts/import-content.ts",
     "test": "npm run build && tsx --test test/api.test.ts test/retrieval.test.ts"
   },
   "dependencies": {

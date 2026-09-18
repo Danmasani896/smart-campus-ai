@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ContentService } from "../content/content.service";
-import { chunks, rank } from "./retrieval";
+import { chunks, rank, suggest, tokens } from "./retrieval";
 export type Citation = {
   id: string;
   title: string;
@@ -120,6 +120,66 @@ export class AiService {
         mode: "directory",
       };
     }
+    // Navigation questions go to the places index, never the FAQ index.
+    const intentPattern =
+      /\b(where( is|'s| are| can i find| do i find)|how (do|can) i (get|go|walk|drive) (to|from)|how (do|can) i (find|reach|locate)( the| a| an)? [a-z]|take me to|locate|directions?( to)?|way to|route to|navigate|nearest|closest|far (is|from))\b/gi;
+    const locationIntent = intentPattern.test(message);
+    const placeQuery = message
+      .replace(intentPattern, " ")
+      .replace(/\b(to|from|near|at|in|on|me|please|get|go)\b/gi, " ");
+    const places = rank(
+      placeQuery,
+      all.filter(
+        (r) =>
+          ["location", "faculty", "department"].includes(r.kind) &&
+          r.latitude != null,
+      ),
+    );
+    if (locationIntent && places.length) {
+      // An exact title match answers alone; otherwise offer the closest three.
+      const asked = tokens(placeQuery),
+        best = tokens(places[0].title);
+      const exact =
+        asked.length > 0 &&
+        asked.every((t) => best.includes(t)) &&
+        best.every((t) => asked.includes(t));
+      const top = exact ? places.slice(0, 1) : places.slice(0, 3);
+      return {
+        answer: top
+          .map(
+            (r) =>
+              `${r.title} — ${r.campus === "new" ? "New Campus" : r.campus === "old" ? "Old Campus" : "Both campuses"} (${r.category})\n${r.body}`,
+          )
+          .join("\n\n"),
+        sources: top.map((r) => ({
+          id: r.id,
+          title: r.title,
+          url: r.sourceUrl,
+          updatedAt: r.updatedAt,
+          kind: r.kind,
+        })),
+        actions: top.map((r) => ({
+          label: `Show ${r.title} on map`,
+          href: `/map?id=${r.id}`,
+        })),
+        places: top.map((r) => ({
+          id: r.id,
+          title: r.title,
+          campus: r.campus,
+          latitude: r.latitude,
+          longitude: r.longitude,
+        })),
+        mode: "location",
+      };
+    }
+    if (locationIntent)
+      return {
+        answer:
+          "I couldn’t match that place to a verified campus location yet. Try the building or faculty name (for example “Where is the Faculty of Computing?”), or browse the campus map.",
+        sources: [],
+        actions: [{ label: "Open campus map", href: "/map" }],
+        mode: "insufficient-evidence",
+      };
     const followup = /\b(it|that|there|this|they|those)\b/i.test(message);
     const query = followup
       ? `${previousQuestions.slice(-1).join(" ")} ${message}`
@@ -148,14 +208,24 @@ export class AiService {
             chunks(row.body).map((body) => ({ ...row, body })),
           ),
         );
-    if (!rows.length)
+    if (!rows.length) {
+      // Offer the nearest official FAQs rather than a dead end.
+      const near = suggest(
+        query,
+        eligible.filter((r) => r.kind === "faq"),
+      );
       return {
-        answer:
-          "I don’t have enough verified BUK information to answer that yet. Try a more specific question or choose a campus. You can also check the fresher guide or ask the relevant university office. I won’t guess official procedures, dates or locations.",
+        answer: near.length
+          ? "I don’t have enough verified BUK information to answer that exactly, so I won’t guess. These official FAQs look closest — open one, or rephrase with the building, office or process name."
+          : "I don’t have enough verified BUK information to answer that yet. Try a more specific question or choose a campus. You can also check the fresher guide or ask the relevant university office. I won’t guess official procedures, dates or locations.",
         sources: [],
-        actions: [{ label: "Open fresher guide", href: "/guide" }],
+        actions: [
+          ...near.map((r) => ({ label: r.title, href: `/faq?id=${r.id}` })),
+          { label: "Open fresher guide", href: "/guide" },
+        ],
         mode: "insufficient-evidence",
       };
+    }
     const fallback = rows
       .map(
         (r) =>

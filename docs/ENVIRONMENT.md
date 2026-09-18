@@ -17,7 +17,7 @@ Run `node scripts/setup.cjs` from the project root. It creates `backend/.env` an
 | `OPENAI_MODEL`             | Required with API key  | Set the exact Responses-compatible model identifier available to your project. No model is silently selected.                                                      |
 | `DOCUMENT_RETENTION_HOURS` | Default 24             | 1–168 hours. Expired personal extracted text becomes inaccessible immediately and is deleted at startup or by a one-minute cleanup task.                           |
 | `ADMIN_EMAIL`              | Only for bootstrap     | Your chosen administrator email. No default administrator account exists.                                                                                          |
-| `ADMIN_PASSWORD`           | Only for bootstrap     | At least 6 characters.  Run `npm run admin:create --prefix backend`, then remove this value. Bootstrap can also deliberately reset that admin’s password.          |
+| `ADMIN_PASSWORD`           | Only for bootstrap     | At least 6 characters. Run `npm run admin:create --prefix backend`, then remove this value. Bootstrap can also deliberately reset that admin’s password.           |
 | `ADMIN_NAME`               | Optional bootstrap     | Display name; defaults to Campus Administrator.                                                                                                                    |
 
 ### AI behavior
@@ -28,14 +28,26 @@ Implementation reference: [OpenAI Responses API](https://developers.openai.com/a
 
 ## Frontend: frontend/.env.local
 
-| Variable                      | Required?                       | What to provide                                                                                                                                                                               |
-| ----------------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_API_URL`         | Default `/api`                  | Relative `/api` is proxied by Next.js to the backend on the same origin (no CORS, works on any hostname). Use an absolute HTTPS URL only when the API is on a separate host.                  |
-| `API_PROXY_TARGET`            | Default `http://127.0.0.1:4000` | Server-side only. Where Next.js forwards `/api/*` requests.                                                                                                                                   |
-| `NEXT_PUBLIC_MAP_TILE_URL`    | Optional                        | Defaults to OpenStreetMap tiles. For Mapbox use `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}?access_token=pk...` with a public token restricted to your domain. |
-| `NEXT_PUBLIC_MAP_ATTRIBUTION` | Required for chosen provider    | Default `© OpenStreetMap contributors`. Preserve attribution required by your tile provider.                                                                                                  |
+| Variable                      | Required?                       | What to provide                                                                                                                                                                                                                                                                                                   |
+| ----------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL`         | Default `/api`                  | Relative `/api` is proxied by Next.js to the backend on the same origin (no CORS, works on any hostname). Use an absolute HTTPS URL only when the API is on a separate host.                                                                                                                                      |
+| `API_PROXY_TARGET`            | Default `http://127.0.0.1:4000` | Server-side only. Where Next.js forwards `/api/*` requests.                                                                                                                                                                                                                                                       |
+| `NEXT_PUBLIC_MAP_PROVIDER`    | Default `google` when a key exists | The map engine shown first. Students can switch between **Google Maps** and **Mapbox Streets (3D)** from the map toolbar whenever both keys are configured (the choice is remembered per browser); `osm` (Leaflet) is used when neither key exists. Walking routes always use Mapbox Directions. |
+| `NEXT_PUBLIC_GOOGLE_MAP_ID`    | Optional                     | A Map ID from Google Cloud Console for a custom map style. Defaults to Google’s `DEMO_MAP_ID`.                                                                                                                             |
+| `NEXT_PUBLIC_MAPBOX_TOKEN`    | For `mapbox`                    | Public token (`pk.…`). Browser-visible: add URL restrictions in the Mapbox console. Also powers walking directions/ETA on any provider.                                                                                                                                                                           |
+| `NEXT_PUBLIC_GOOGLE_MAPS_KEY` | For `google`                    | Browser key restricted to your HTTP referrers. Requires billing on the project (Google grants monthly free usage).                                                                                                                                                                                                |
+| `NEXT_PUBLIC_MAP_TILE_URL`    | Optional (`osm` only)           | Raster tile template for the Leaflet fallback. Defaults to OpenStreetMap tiles.                                                                                                                                                                                                                                   |
+| `NEXT_PUBLIC_MAP_ATTRIBUTION` | Required for chosen provider    | Default `© OpenStreetMap contributors`. Preserve attribution required by your tile provider.                                                                                                                                                                                                                      |
 
 Next.js embeds `NEXT_PUBLIC_*` values into the client build: rebuild after changing them. There are no Google Maps, vector database, SMTP, S3 or Redis keys required by this implementation. External walking directions are ordinary links. Do not add unused service credentials.
+
+## Campus AI retrieval
+
+Campus AI is retrieval-first: it answers only from published, verified rows. Questions are tokenised with light stemming and a student-vocabulary synonym map (`backend/src/modules/ai/retrieval.ts`), then matched against FAQ titles/bodies; at least 40–50 % of the question’s meaningful words must be covered before an answer is returned. Navigation phrasing (“where is…”, “how do I get to…”) is routed to the places index. When nothing qualifies the assistant abstains and offers the closest official FAQs instead of guessing. Coverage grows with content: add FAQs and knowledge rows through Administration or `content:import`.
+
+## Campus content
+
+`npm run db:seed --prefix backend` imports 34 sourced BUK FAQs, 52 campus places from OpenStreetMap (each citing its OSM feature), 5 emergency numbers taken from the official FAQ pages, and 4 clearly labelled sample events. Re-running never overwrites editorial changes. Bulk-load your own data with `npm run content:import --prefix backend -- places.csv` (CSV or JSON; columns are documented at the top of `backend/scripts/import-content.ts`). Publishing rules apply: a published row needs `verified`, a source URL and a source label; emergency rows need a phone; events need `startsAt`.
 
 ## Deployment notes
 

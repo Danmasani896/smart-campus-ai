@@ -36,7 +36,7 @@ npm run admin:create --prefix backend
 
 Remove `ADMIN_PASSWORD` after bootstrapping. Sign in at `/profile` and open `/admin`. Create or import content, add an official HTTPS source, verify it, then publish. You can edit, archive or delete each content type. Only administrators can publish, and every mutation is audited. Roles are assigned through trusted bootstrap, not public registration.
 
-The seed includes **34 published, source-linked BUK FAQs**, paraphrased from the official university pages, plus operational **drafts** for review. FAQs appear in `/faq`, search and Campus AI. Re-running `npm run db:seed` in `backend` adds missing records without overwriting editorial changes. Chapter One establishes scope rather than operational facts; map locations, events and other directory records still need university review. See [FAQ provenance and branding](docs/BRAND-AND-FAQ.md).
+The seed includes **34 published, source-linked BUK FAQs** paraphrased from the official university pages, **52 campus places** from OpenStreetMap (each citing its OSM feature) that power the map and “Where is…?” questions, **5 emergency numbers** from the official FAQ, and **4 sample events** labelled as such, plus operational **drafts** for review. Re-running `npm run db:seed` in `backend` adds missing records without overwriting editorial changes. Load your own directory data with `npm run content:import --prefix backend -- file.csv`. Places and numbers still deserve university review before a public launch. See [FAQ provenance and branding](docs/BRAND-AND-FAQ.md).
 
 ## Included workflows
 
