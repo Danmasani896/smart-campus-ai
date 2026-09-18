@@ -3,30 +3,52 @@ import { useEffect } from "react";
 import {
   CircleMarker,
   MapContainer,
-  Popup,
+  Polyline,
   TileLayer,
+  Tooltip,
   useMap,
 } from "react-leaflet";
-import type { CampusContent } from "@/lib/types";
-function Center({ selected }: { selected: CampusContent | null }) {
+import {
+  CAMPUS_VIEWS,
+  colorFor,
+  toLngLat,
+  type CampusMapProps,
+  type LngLat,
+} from "@/lib/map";
+const ll = (p: LngLat): [number, number] => [p[1], p[0]];
+function Camera({ selected, campus, route }: CampusMapProps) {
   const map = useMap();
   useEffect(() => {
-    if (selected?.latitude != null && selected.longitude != null)
-      map.setView([selected.latitude, selected.longitude], 16);
-  }, [selected, map]);
+    if (route?.coordinates.length) {
+      map.flyToBounds(route.coordinates.map(ll), {
+        paddingTopLeft: [360, 110],
+        paddingBottomRight: [60, 190],
+        duration: 1.4,
+      });
+      return;
+    }
+    const at = selected && toLngLat(selected);
+    if (at) map.flyTo(ll(at), 17, { duration: 1.4 });
+    else {
+      const view =
+        CAMPUS_VIEWS[campus as keyof typeof CAMPUS_VIEWS] || CAMPUS_VIEWS.all;
+      map.flyTo(ll(view.center), view.zoom, { duration: 1.4 });
+    }
+  }, [selected, campus, route, map]);
   return null;
 }
-export default function CampusMap({
-  items,
-  selected,
-  onSelect,
-}: {
-  items: CampusContent[];
-  selected: CampusContent | null;
-  onSelect: (item: CampusContent) => void;
-}) {
+// OpenStreetMap fallback used when no Mapbox token or Google key is configured.
+export default function LeafletCampusMap(props: CampusMapProps) {
+  const { items, selected, onSelect, route, origin, userLocation } = props;
+  const view = CAMPUS_VIEWS.all;
   return (
-    <MapContainer center={[12, 8.5]} zoom={11} scrollWheelZoom={false}>
+    <MapContainer
+      className="map-canvas"
+      center={ll(view.center)}
+      zoom={view.zoom}
+      zoomControl
+      scrollWheelZoom
+    >
       <TileLayer
         attribution={
           process.env.NEXT_PUBLIC_MAP_ATTRIBUTION ||
@@ -37,35 +59,68 @@ export default function CampusMap({
           "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         }
       />
-      <Center selected={selected} />
-      {items
-        .filter((i) => i.verified && i.latitude != null && i.longitude != null)
-        .map((item) => (
+      <Camera {...props} />
+      {route && (
+        <Polyline
+          positions={route.coordinates.map(ll)}
+          pathOptions={{
+            color: "#315efb",
+            weight: 5,
+            dashArray: route.source === "estimate" ? "2 10" : undefined,
+          }}
+        />
+      )}
+      {origin && route && (
+        <CircleMarker
+          center={ll(origin.at)}
+          radius={7}
+          pathOptions={{
+            color: "#fff",
+            weight: 3,
+            fillColor: "#16a34a",
+            fillOpacity: 1,
+          }}
+        >
+          <Tooltip permanent direction="top">
+            {origin.name}
+          </Tooltip>
+        </CircleMarker>
+      )}
+      {userLocation && (
+        <CircleMarker
+          center={ll(userLocation)}
+          radius={8}
+          pathOptions={{
+            color: "#fff",
+            weight: 3,
+            fillColor: "#315efb",
+            fillOpacity: 1,
+          }}
+        />
+      )}
+      {items.map((item) => {
+        const at = toLngLat(item);
+        if (!at) return null;
+        const active = selected?.id === item.id;
+        return (
           <CircleMarker
             key={item.id}
-            center={[item.latitude!, item.longitude!]}
-            radius={selected?.id === item.id ? 11 : 8}
+            center={ll(at)}
+            radius={active ? 11 : 8}
             pathOptions={{
               color: "#fff",
               weight: 3,
-              fillColor: "#315efb",
+              fillColor: colorFor(item.category),
               fillOpacity: 1,
             }}
             eventHandlers={{ click: () => onSelect(item) }}
           >
-            <Popup>
-              <strong>{item.title}</strong>
-              <p>{item.body.slice(0, 160)}</p>
-              <a
-                href={`https://www.google.com/maps/dir/?api=1&destination=${item.latitude},${item.longitude}&travelmode=walking`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open walking directions ↗
-              </a>
-            </Popup>
+            <Tooltip direction="top" offset={[0, -8]}>
+              {item.title}
+            </Tooltip>
           </CircleMarker>
-        ))}
+        );
+      })}
     </MapContainer>
   );
 }

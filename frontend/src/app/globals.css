@@ -2,6 +2,7 @@
 @import "@fontsource-variable/plus-jakarta-sans";
 @import "@fontsource-variable/sora";
 @import "leaflet/dist/leaflet.css";
+@import "./map.css";
 :root {
   --background: #f7f9ff;
   --surface: #fff;
