@@ -86,9 +86,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         aria-label="Main navigation"
       >
         <Link href="/" className="brand">
-          <span className="brand-icon">
-            <GraduationCap size={25} />
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="brand-logo" src="/buk-logo.png" alt="" />
+
           <span>
             smartcampus
             <span className="brand-sub">BAYERO UNIVERSITY, KANO</span>

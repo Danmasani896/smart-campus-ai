@@ -1,0 +1,39 @@
+services:
+  campus-api:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: file:/data/campus.db
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      NODE_ENV: production
+      PORT: "4000"
+      INSTITUTION_ID: buk
+      DOCUMENT_RETENTION_HOURS: "24"
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4.1-mini}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-Campus Administrator}
+    volumes:
+      - campus-data:/data
+
+  campus-web:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_MAP_PROVIDER: ${NEXT_PUBLIC_MAP_PROVIDER:-mapbox}
+        NEXT_PUBLIC_MAPBOX_TOKEN: ${NEXT_PUBLIC_MAPBOX_TOKEN:-}
+        NEXT_PUBLIC_GOOGLE_MAPS_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_KEY:-}
+    restart: unless-stopped
+    depends_on:
+      - campus-api
+    networks:
+      - default
+      - dokploy-network
+
+volumes:
+  campus-data:
+
+networks:
+  dokploy-network:
+    external: true

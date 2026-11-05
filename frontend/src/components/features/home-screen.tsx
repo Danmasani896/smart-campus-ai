@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useCampus, useFilteredContent } from "../providers";
 import { Badge, Card, ErrorNotice } from "../ui";
+import { CampusCarousel } from "./campus-carousel";
 import { campusName } from "@/lib/types";
 export function HomeScreen() {
   const router = useRouter(),
@@ -124,6 +125,7 @@ export function HomeScreen() {
           </div>
         </div>
       </section>
+      <CampusCarousel />
       <div className="section-heading">
         <h2>Make yourself at home</h2>
         <span>Your essentials, one place.</span>

@@ -134,15 +134,82 @@ select {
   padding: 0 6px;
   font-family: "Sora Variable", sans-serif;
 }
-.brand-icon {
-  border: none;
-  border-radius: 10px;
-  width: 37px;
-  height: 41px;
+.brand-logo {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  object-fit: contain;
+}
+.campus-carousel {
+  margin: 30px 0 8px;
+}
+.carousel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.carousel-heading h2 {
+  font-size: 18px;
+  font-weight: 700;
+}
+.carousel-heading p {
+  font-size: 12px;
+  color: #64718b;
+  margin-top: 3px;
+}
+.carousel-controls {
+  display: flex;
+  gap: 8px;
+}
+.carousel-controls button {
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
+  border-radius: 999px;
+  border: 1px solid #dfe6f7;
+  background: #fff;
+  color: #142047;
+}
+.carousel-controls button:hover {
+  border-color: #315efb;
+  color: #315efb;
+}
+.carousel-track {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.carousel-track::-webkit-scrollbar {
+  display: none;
+}
+.carousel-slide {
+  flex: 0 0 min(420px, 86%);
+  scroll-snap-align: start;
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  aspect-ratio: 3 / 2;
+  background: #edf2ff;
+}
+.carousel-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.carousel-slide figcaption {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 26px 14px 11px;
+  font-size: 12px;
+  font-weight: 600;
   color: #fff;
-  background: #315efb;
+  background: linear-gradient(transparent, rgb(12 20 48 / 0.78));
 }
 .brand-sub {
   display: block;

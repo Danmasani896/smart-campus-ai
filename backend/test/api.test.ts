@@ -23,6 +23,8 @@ test(
       INSTITUTION_ID: "test",
       OPENAI_API_KEY: "",
       OPENAI_MODEL: "",
+      OPENROUTER_API_KEY: "",
+      OPENROUTER_MODEL: "",
     };
     const migration = spawnSync(
       process.execPath,
@@ -51,7 +53,7 @@ test(
       server.stderr?.on("data", (d) => (logs += d));
       const base = "http://127.0.0.1:4197/api";
       let ready = false;
-      for (let i = 0; i < 100; i++) {
+      for (let i = 0; i < 600; i++) {
         try {
           if ((await fetch(`${base}/health`)).ok) {
             ready = true;

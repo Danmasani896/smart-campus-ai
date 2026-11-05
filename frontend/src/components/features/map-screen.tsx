@@ -78,7 +78,8 @@ export function MapScreen() {
     [locateError, setLocateError] = useState(""),
     [destination, setDestination] = useState<CampusContent | null>(null),
     [engine, setEngine] = useState<MapProvider>(mapProvider),
-    routeAbort = useRef<AbortController | null>(null);
+    routeAbort = useRef<AbortController | null>(null),
+    autoRouted = useRef<string | null>(null);
 
   const categories = useMemo(
     () => ["All", ...Array.from(new Set(all.map((c) => c.category))).sort()],
@@ -129,6 +130,16 @@ export function MapScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params, availableIds]);
+
+  // Deep links from chat: /map?id=…&directions=1 start the route once.
+  useEffect(() => {
+    const id = params.get("id");
+    if (!params.has("directions") || selected?.id !== id) return;
+    if (autoRouted.current === id) return;
+    autoRouted.current = id;
+    directions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params, selected?.id]);
 
   // A drawn route belongs to its destination: closing the card keeps it,
   // choosing a different place clears it.

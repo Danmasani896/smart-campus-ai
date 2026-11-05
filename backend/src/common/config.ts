@@ -7,6 +7,8 @@ export function validateConfig(env: Record<string, unknown>) {
   if (!env.DATABASE_URL) throw new Error("DATABASE_URL is required");
   if (env.OPENAI_API_KEY && !env.OPENAI_MODEL)
     throw new Error("Set OPENAI_MODEL when configuring OPENAI_API_KEY");
+  if (env.OPENROUTER_API_KEY && !env.OPENROUTER_MODEL)
+    throw new Error("Set OPENROUTER_MODEL when configuring OPENROUTER_API_KEY");
   const retention = Number(env.DOCUMENT_RETENTION_HOURS ?? 24);
   if (!Number.isInteger(retention) || retention < 1 || retention > 168)
     throw new Error("DOCUMENT_RETENTION_HOURS must be 1–168");
